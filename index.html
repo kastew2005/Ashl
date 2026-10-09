@@ -39,7 +39,7 @@
 <div id="mAbout" class="modal hidden"><div class="glass box">
   <h2>Об игре</h2>
   <p>Ashfall — прототип survival-игры в браузере. Руби деревья, добывай камень, обыскивай заброшенные деревни, крафти инструменты и строй укрытие.</p>
-  <p>ПК: WASD — движение, Shift — бег, мышь (зажать) — обзор, E — действие, I — инвентарь, C — крафт.<br>Телефон: левый стик — движение, свайп справа — обзор.</p>
+  <p>ПК: WASD — движение, Shift — бег, мышь (зажать) — обзор, E — действие, 1–6 — хотбар (повторное нажатие — использовать), I — инвентарь, C — крафт.<br>Телефон: левый стик — движение, свайп справа — обзор.</p>
   <button class="btn close">Закрыть</button></div></div>
 
 <!-- HUD -->
@@ -48,11 +48,15 @@
     <div>❤️<span class="bar"><i id="bHp" class="hp"></i></span></div>
     <div>🍖<span class="bar"><i id="bHun" class="hun"></i></span></div>
     <div>💧<span class="bar"><i id="bThi" class="thi"></i></span></div>
+    <div>⚡<span class="bar"><i id="bSta" class="sta"></i></span></div>
+    <div>🌡<span class="bar"><i id="bTmp" class="tmp"></i></span></div>
+    <div>😴<span class="bar"><i id="bFat" class="fat"></i></span></div>
     <small id="clock"></small>
   </div>
   <div class="top"><button id="bInv" class="round">🎒</button><button id="bCraft" class="round">🛠</button><button id="bExit" class="round">☰</button></div>
   <div id="cross"></div>
   <div id="toast"></div>
+  <div id="hotbar"></div>
   <div id="stick"><div id="knob"></div></div>
   <button id="bAct" class="act hidden">Действие</button>
 </div>
