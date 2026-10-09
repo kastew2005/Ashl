@@ -1,13 +1,13 @@
 import * as THREE from 'three';
-import {initAudio,sfx,wind} from './audio.js';
+import {initAudio,sfx,wind,rustle,listen,crackle} from './audio.js';
 import * as GFX from './gfx.js';
 const $=i=>document.getElementById(i), TAU=Math.PI*2, SAVE='ashfall_save_v2';
 
 /* ===== Данные ===== */
 const TIPS=['Сырое мясо портится — готовь его на костре.','Ночью и в дождь тело мёрзнет: грейся у огня.','Топор в руке даёт втрое больше дерева.','Верстак открывает продвинутый крафт.','Куртка из сундука греет, пока лежит в инвентаре.','Бег тратит выносливость, а долгая ходьба — копит усталость.'];
-const ITEMS={torch:['🔦','Факел'],cloth:['🧵','Ткань'],bandage:['🩹','Бинт'],meat:['🥩','Сырое мясо'],steak:['🍖','Жаркое'],rotten:['🤢','Тухлятина'],coat:['🧥','Тёплая куртка'],axe2:['🪓','Кованый топор'],bench:['🛠️','Верстак'],floor:['🟫','Фундамент'],wood:['🪵','Дерево'],stone:['🪨','Камень'],axe:['🪓','Топор'],pickaxe:['⛏️','Кирка'],campfire:['🔥','Костёр'],wall:['🧱','Стена'],water:['💧','Вода'],food:['🥫','Консервы']};
-const RAR={torch:1,cloth:0,bandage:1,wood:0,stone:0,food:0,water:0,meat:0,rotten:0,steak:1,campfire:1,wall:1,floor:1,axe:1,pickaxe:1,bench:2,axe2:2,coat:3};
-const RECIPES=[{id:'torch',cost:{wood:3}},{id:'bandage',cost:{cloth:2},n:2},{id:'floor',cost:{wood:4}},{id:'bench',cost:{wood:8,stone:4}},{id:'axe2',cost:{wood:4,stone:8},adv:1},{id:'axe',cost:{wood:3,stone:2}},{id:'pickaxe',cost:{wood:3,stone:3}},{id:'campfire',cost:{wood:5,stone:3}},{id:'wall',cost:{wood:6}}];
+const ITEMS={torch:['🔦','Факел'],cloth:['🧵','Ткань'],bandage:['🩹','Бинт'],meat:['🥩','Сырое мясо'],steak:['🍖','Жаркое'],rotten:['🤢','Тухлятина'],coat:['🧥','Тёплая куртка'],axe2:['🪓','Кованый топор'],bench:['🛠️','Верстак'],floor:['🟫','Фундамент'],wood:['🪵','Дерево'],stone:['🪨','Камень'],axe:['🪓','Топор'],pickaxe:['⛏️','Кирка'],campfire:['🔥','Костёр'],wall:['🧱','Дощатая стена'],swall:['🏛️','Каменная стена'],water:['💧','Вода'],food:['🥫','Консервы']};
+const RAR={swall:2,torch:1,cloth:0,bandage:1,wood:0,stone:0,food:0,water:0,meat:0,rotten:0,steak:1,campfire:1,wall:1,floor:1,axe:1,pickaxe:1,bench:2,axe2:2,coat:3};
+const RECIPES=[{id:'swall',cost:{stone:8}},{id:'torch',cost:{wood:3}},{id:'bandage',cost:{cloth:2},n:2},{id:'floor',cost:{wood:4}},{id:'bench',cost:{wood:8,stone:4}},{id:'axe2',cost:{wood:4,stone:8},adv:1},{id:'axe',cost:{wood:3,stone:2}},{id:'pickaxe',cost:{wood:3,stone:3}},{id:'campfire',cost:{wood:5,stone:3}},{id:'wall',cost:{wood:6}}];
 const cfg=Object.assign({q:1,sens:1},JSON.parse(localStorage.getItem('ashfall_cfg')||'{}'));
 let st,inv,removed=[],opened=[],placed=[],mode='load';
 const DEF=()=>({hp:100,hun:100,thi:100,sta:100,fat:0,tmp:70,meatAge:0,vy:0,h:0,bleed:0,t:.3,x:0,z:0,yaw:0,pitch:0});
@@ -62,19 +62,16 @@ async function buildWorld(){
   // Лагеря торговцев (безопасные зоны с костром)
   for(let n=0,tr=0;n<2&&tr<200;tr++){const x=(rnd()-.5)*180,z=(rnd()-.5)*180;
     if(H(x,z)<WATER+1.5||Math.hypot(x,z)<25||villages.some(v=>Math.hypot(v[0]-x,v[1]-z)<35))continue;n++;
-    const y=H(x,z),tent=new THREE.Mesh(new THREE.ConeGeometry(2.4,2.6,6),mat(0x7a4b2a)),tm=new THREE.Group();
-    tent.position.set(x+3,y+1.3,z);tent.castShadow=true;
-    const body=new THREE.Mesh(new THREE.CylinderGeometry(.3,.35,1.3,8),mat(0x2d4a6b)),head=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),mat(0xc89b78));
-    body.position.y=.65;head.position.y=1.5;tm.add(body,head);tm.position.set(x,y,z);scene.add(tent,tm);traders.push({x,z});addPlaced({t:'campfire',x:x-1.8,z:z+1,ry:0})}
+    const y=H(x,z),tent=GFX.tent(),npc=GFX.human();tent.position.set(x+3.4,y,z);tent.rotation.y=rnd()*TAU;npc.position.set(x,y,z);npc.rotation.y=Math.PI*.75;scene.add(tent,npc);traders.push({x,z,g:npc});addPlaced({t:'campfire',x:x-1.8,z:z+1,ry:0})}
   prog(50,'Лес…');await tick();
 
   // Деревья и камни — InstancedMesh (один draw call на тип)
   const spawn=(count,okFn,build)=>{for(let i=0;i<count;i++){const x=(rnd()-.5)*(HALF*2-10),z=(rnd()-.5)*(HALF*2-10),y=H(x,z);
     if(y<WATER+1||Math.hypot(x,z)<6||villages.some(v=>Math.hypot(v[0]-x,v[1]-z)<20))continue;build(x,y,z,.8+rnd()*.7,rnd()*TAU)}};
-  const VAR=[GFX.treeGeo(0),GFX.treeGeo(1)].map(g=>{const m=new THREE.InstancedMesh(g,GFX.VM,110);m.castShadow=m.receiveShadow=true;scene.add(m);return m}),
+  const VAR=[GFX.treeGeo(0),GFX.treeGeo(1)].map(g=>{const m=new THREE.InstancedMesh(g,GFX.TM,110);m.castShadow=m.receiveShadow=true;scene.add(m);return m}),
         rock=new THREE.InstancedMesh(GFX.rockGeo(),GFX.VM,120);rock.castShadow=rock.receiveShadow=true;scene.add(rock);
   const tc=[0,0];let ri=0;
-  spawn(220,0,(x,y,z,s,a)=>{const v=rnd()<.45?1:0;if(tc[v]>=110)return;dummy.position.set(x,y-.1,z);dummy.rotation.set((rnd()-.5)*.06,a,(rnd()-.5)*.06);dummy.scale.setScalar(s*(v?1.15:1));dummy.updateMatrix();
+  spawn(150,0,(x,y,z,s,a)=>{const v=rnd()<.45?1:0;if(tc[v]>=110)return;dummy.position.set(x,y-.1,z);dummy.rotation.set((rnd()-.5)*.06,a,(rnd()-.5)*.06);dummy.scale.setScalar(s*(v?1.15:1));dummy.updateMatrix();
     VAR[v].setMatrixAt(tc[v],dummy.matrix);nodes.push({k:'tree',x,z,hp:3,i:tc[v],ms:[VAR[v]],r:.7,id:nodes.length});tc[v]++});
   spawn(120,0,(x,y,z,s,a)=>{if(ri>=120)return;dummy.position.set(x,y+.2*s,z);dummy.rotation.set(0,a,0);dummy.scale.set(1.3*s,1.05*s,s);dummy.updateMatrix();
     rock.setMatrixAt(ri,dummy.matrix);nodes.push({k:'rock',x,z,hp:4,i:ri,ms:[rock],r:1.2*s,id:nodes.length});ri++});
@@ -114,21 +111,18 @@ function renderInv(){
   setHeld(held());
 }
 let lights=0;
-const fires=[],traders=[],PL={wall:[0,0,0,0,1],floor:[0,0,0,.02,0],bench:[0,0,0,0,1]};
+const fires=[],traders=[],PL={wall:[0,0,0,0,1],swall:[0,0,0,0,1],floor:[0,0,0,.02,0],bench:[0,0,0,0,1]};
 let dayF=1,rain=0,rainT=70,rainOn=false,rainM,walk=0,swing=0,eatT=0,stepD=0;
 function addPlaced(o){
   let m;const pl=PL[o.t];
   if(pl){m=GFX.piece(o.t);
     m.position.set(o.x,H(o.x,o.z)+pl[3],o.z);m.rotation.y=o.ry;m.castShadow=m.receiveShadow=true;if(pl[4])obst.push({x:o.x,z:o.z,r:o.t=='bench'?.9:1.1})}
-  else{m=new THREE.Group();const f=new THREE.Mesh(new THREE.ConeGeometry(.3,.9,12),new THREE.MeshBasicMaterial({color:0xff8a2a}));f.position.y=.6;m.add(f);
-    for(let i=0;i<3;i++){const l=new THREE.Mesh(new THREE.CylinderGeometry(.07,.08,.95,8).rotateZ(Math.PI/2),mat(0x4a3320));l.position.y=.1;l.rotation.y=i*1.05;m.add(l)}
-    if(lights++<6){const pl=new THREE.PointLight(0xff8a3c,2.2,14);pl.position.y=1;m.add(pl)}
-    m.position.set(o.x,H(o.x,o.z),o.z);fires.push(o)}
+  else{m=GFX.campfire(lights++<6);m.position.set(o.x,H(o.x,o.z),o.z);fires.push(o);fireFX.push(m)}
   scene.add(m);
 }
 function place(t){
   const fx=-Math.sin(st.yaw),fz=-Math.cos(st.yaw);let x=st.x+fx*3,z=st.z+fz*3,ry=0;
-  if(t=='wall'||t=='floor'){x=Math.round(x/2)*2;z=Math.round(z/2)*2;ry=t=='wall'&&Math.abs(fx)>Math.abs(fz)?Math.PI/2:0}else ry=st.yaw;
+  if(t=='wall'||t=='swall'||t=='floor'){x=Math.round(x/2)*2;z=Math.round(z/2)*2;ry=(t=='wall'||t=='swall')&&Math.abs(fx)>Math.abs(fz)?Math.PI/2:0}else ry=st.yaw;
   const o={t,x,z,ry};placed.push(o);addPlaced(o);take(t);toast('Поставлено: '+ITEMS[t][1]);close();
 }
 // Использование предмета: еда, вода, готовка, постройки
@@ -178,14 +172,18 @@ function act(){
 }
 
 /* ===== Травмы, волки, следы ===== */
-const wolves=[],prints=[],printGeo=new THREE.CircleGeometry(.11,8).scale(.6,1.4,1),printMat=new THREE.MeshBasicMaterial({color:0x1a1410,transparent:true,opacity:.45,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2});
-let pg=null,swT=0,hurtF=0,amb=10,printI=0;
-const hurt=n=>{st.hp-=n;hurtF=1;sfx.hit(2)};
+const fireFX=[],wolves=[],prints=[],printGeo=new THREE.CircleGeometry(.11,8).scale(.6,1.4,1),printMat=new THREE.MeshBasicMaterial({color:0x1a1410,transparent:true,opacity:.45,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2});
+let canT=0,crouch=false,eyeH=1.7,pyaw=0,ppitch=0,pg=null,swT=0,hurtF=0,amb=10,printI=0;
+const hurt=(n,k='blood')=>{st.hp-=n;hurtF=1;sfx.hit(2);splat(k,k=='dirt'?3:n>8?2:1)};
+function splat(kind,n){const box=$('splats'),c=kind=='dirt'?'70,48,28':'140,10,14',R=()=>30+Math.random()*40;
+  for(let i=0;i<n;i++){const d=document.createElement('div'),sz=70+Math.random()*150;d.className='splat';
+    d.style.cssText=`left:${Math.random()*88}%;top:${Math.random()*82}%;width:${sz}px;height:${sz*(.7+Math.random()*.6)}px;border-radius:${R()}% ${R()}% ${R()}% ${R()}%/${R()}% ${R()}% ${R()}% ${R()}%;background:radial-gradient(circle at 40% 40%,rgba(${c},.85),rgba(${c},.5) 60%,transparent 72%);rotate:${Math.random()*360}deg`;
+    box.appendChild(d);setTimeout(()=>d.remove(),7000)}}
 function hitWolf(){const fx=-Math.sin(st.yaw),fz=-Math.cos(st.yaw);
   for(const w of wolves){if(w.hp<=0)continue;const dx=w.x-st.x,dz=w.z-st.z,d=Math.hypot(dx,dz);
     if(d<3&&(dx*fx+dz*fz)/d>.4){w.hp-=({axe:2,axe2:3,pickaxe:2}[held()]||1);sfx.hit(0);if(w.hp<=0){scene.remove(w.g);add('meat',2);toast('Волк убит: + мясо')}return true}}return false}
 function updWolves(dt){for(const w of wolves){if(w.hp<=0)continue;w.t+=dt;w.cd-=dt;
-  const dx=st.x-w.x,dz=st.z-w.z,d=Math.hypot(dx,dz),agro=d<(dayF>.3?16:26);let sp=0;
+  const dx=st.x-w.x,dz=st.z-w.z,d=Math.hypot(dx,dz),agro=d<(dayF>.3?16:26)*(crouch?.55:1);let sp=0;
   if(agro&&d>1.5){w.yaw=Math.atan2(-dx,-dz);sp=5.2}else if(!agro&&Math.sin(w.t*.4)>.5){w.yaw+=dt*.6;sp=1.3}
   const nx=w.x-Math.sin(w.yaw)*sp*dt,nz=w.z-Math.cos(w.yaw)*sp*dt;if(H(nx,nz)>WATER+.5&&Math.abs(nx)<HALF-3&&Math.abs(nz)<HALF-3){w.x=nx;w.z=nz}else w.yaw+=1;
   w.g.position.set(w.x,H(w.x,w.z)+(sp>2?Math.abs(Math.sin(w.t*10))*.06:0),w.z);w.g.rotation.y=w.yaw;
@@ -205,15 +203,18 @@ document.addEventListener('click',e=>{if(e.target.closest('.btn,.round,.slot'))s
 const stick=$('stick'),knob=$('knob');let sid=null;
 const mv=e=>{const r=stick.getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,m=Math.min(1,Math.hypot(dx,dy)/60),a=Math.atan2(dy,dx);
   sv={x:Math.cos(a)*m,y:Math.sin(a)*m};knob.style.transform=`translate(${sv.x*35}px,${sv.y*35}px)`};
-stick.onpointerdown=e=>{sid=e.pointerId;stick.setPointerCapture(sid);mv(e)};
+stick.onpointerdown=e=>{stick.classList.add('drag');sid=e.pointerId;stick.setPointerCapture(sid);mv(e)};
 stick.onpointermove=e=>{if(e.pointerId==sid)mv(e)};
-stick.onpointerup=stick.onpointercancel=e=>{if(e.pointerId==sid){sid=null;sv={x:0,y:0};knob.style.transform=''}};
+stick.onpointerup=stick.onpointercancel=e=>{if(e.pointerId==sid){stick.classList.remove('drag');sid=null;sv={x:0,y:0};knob.style.transform=''}};
 // Обзор: тач/мышь по canvas
 let lid=null,lx=0,ly=0;const cv=$('c');
 cv.onpointerdown=e=>{if(mode!='play')return;lid=e.pointerId;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(lid)};
 cv.onpointermove=e=>{if(e.pointerId!=lid)return;const k=.005*cfg.sens;st.yaw-=(e.clientX-lx)*k;st.pitch=Math.max(-1.3,Math.min(1.3,st.pitch-(e.clientY-ly)*k));lx=e.clientX;ly=e.clientY};
 cv.onpointerup=cv.onpointercancel=()=>lid=null;
 $('bAct').onpointerdown=act;
+$('bAtk').onpointerdown=()=>{if(cd>0)return;cd=.5;swing=1;if(!hitWolf())sfx.hit(2)};
+$('bCrouch').onpointerdown=()=>{crouch=!crouch;$('bCrouch').classList.toggle('on',crouch)};
+addEventListener('keydown',e=>{if(mode=='play'&&e.code=='KeyZ'){crouch=!crouch;$('bCrouch').classList.toggle('on',crouch)}});
 
 /* ===== UI: меню, окна ===== */
 const open=id=>{renderInv();$(id).classList.remove('hidden')},close=()=>document.querySelectorAll('.modal').forEach(m=>m.classList.add('hidden'));
@@ -252,7 +253,9 @@ function loop(now){
   if(mode=='play')update(dt);else{hands.visible=false; // облёт в меню
     const a=now/14000;st.x=Math.cos(a)*60;st.z=Math.sin(a)*60;cam.position.set(st.x,H(st.x,st.z)+14,st.z);cam.lookAt(0,H(0,0)+4,0);st.t=.72}
   sun.position.set(st.x+Math.sin((st.t-.25)*TAU)*80,sh*80+5,st.z+30);sun.target.position.set(st.x,0,st.z);
-  renderer.render(scene,cam);
+  GFX.WIND.value=now/1000;
+  for(const m of fireFX){const dx=m.position.x-cam.position.x,dz=m.position.z-cam.position.z,d2=dx*dx+dz*dz;if(d2<4900){m.userData.fx(dt,now/1000);if(mode=='play'&&d2<900&&Math.random()<dt*6)crackle(m.position.x,m.position.y+.3,m.position.z,.2)}}
+  listen(cam.position.x,cam.position.y,cam.position.z,st.yaw);renderer.render(scene,cam);
 }
 function update(dt){
   hands.visible=true;const px=st.x,pz=st.z;
@@ -261,8 +264,8 @@ function update(dt){
   rain+=((rainOn?1:0)-rain)*dt*.3;
   // движение (WASD или стик), коллизии, спринт
   let ix=(keys.KeyD?1:0)-(keys.KeyA?1:0)+sv.x,iz=(keys.KeyS?1:0)-(keys.KeyW?1:0)+sv.y;const l=Math.hypot(ix,iz);if(l>1){ix/=l;iz/=l}
-  const moving=l>.1,sprint=moving&&st.sta>5&&(keys.ShiftLeft||Math.hypot(sv.x,sv.y)>.97);
-  const sp=(sprint?7:4.5)*(1-st.fat/100*.35)*(st.thi<15?.7:1)*(st.tmp<25?.8:1),c=Math.cos(st.yaw),sn=Math.sin(st.yaw);
+  const moving=l>.1,sprint=moving&&!crouch&&st.sta>5&&(keys.ShiftLeft||Math.hypot(sv.x,sv.y)>.97);
+  const sp=(crouch?2.2:sprint?7:4.5)*(1-st.fat/100*.35)*(st.thi<15?.7:1)*(st.tmp<25?.8:1),c=Math.cos(st.yaw),sn=Math.sin(st.yaw);
   let nx=st.x+(ix*c+iz*sn)*sp*dt,nz=st.z+(-ix*sn+iz*c)*sp*dt;
   const push=o=>{const dx=nx-o.x,dz=nz-o.z,d=Math.hypot(dx,dz),m=o.r+.4;if(d<m&&d>0){nx=o.x+dx/d*m;nz=o.z+dz/d*m}};
   for(const n of nodes)if(n.hp>0&&Math.abs(n.x-nx)<3&&Math.abs(n.z-nz)<3)push(n);
@@ -270,13 +273,14 @@ function update(dt){
   st.x=Math.max(-HALF+3,Math.min(HALF-3,nx));st.z=Math.max(-HALF+3,Math.min(HALF-3,nz));
   const gy=H(st.x,st.z),gg=Math.max(gy,WATER+.3);if(pg===null)pg=gg-st.h;
   // прыжок/падение: удар о землю с высоты ранит и вызывает кровотечение
-  let wy=pg+st.h+st.vy*dt;st.vy-=22*dt;if(wy<=gg){if(st.vy<-10){hurt((-st.vy-10)*7);if(st.vy<-12)st.bleed=1}st.vy=0;wy=gg}st.h=wy-gg;pg=gg;
+  let wy=pg+st.h+st.vy*dt;st.vy-=22*dt;if(wy<=gg){if(st.vy<-10){hurt((-st.vy-10)*7,'dirt');if(st.vy<-12)st.bleed=1}st.vy=0;wy=gg}st.h=wy-gg;pg=gg;
   // одышка: качание камеры при низкой выносливости/сильной усталости
   const kk=Math.max(0,(30-st.sta)/30,(st.fat-60)/40);swT+=dt;
-  cam.position.set(st.x,wy+1.7,st.z);cam.rotation.set(st.pitch+Math.sin(swT*2.2)*.015*kk,st.yaw,Math.sin(swT*1.3)*.03*kk);
+  eyeH+=((crouch?1.1:1.7)-eyeH)*Math.min(1,dt*10);cam.position.set(st.x,wy+eyeH,st.z);cam.rotation.set(st.pitch+Math.sin(swT*2.2)*.015*kk,st.yaw,Math.sin(swT*1.3)*.03*kk);
   // шаги и ветер
-  stepD+=Math.hypot(st.x-px,st.z-pz);if(stepD>(sprint?2.2:1.7)){stepD=0;sfx.step(gy<WATER+.7?0:gy>6.5?2:1);if(st.h<.1&&(rain>.2||gy<WATER+.7))footprint(gy)}
+  stepD+=Math.hypot(st.x-px,st.z-pz);if(stepD>(sprint?2.2:1.7)){stepD=0;sfx.step(gy<WATER+.7?0:gy>6.5?2:1);if(gy>0&&gy<6.5&&Math.random()<.14)sfx.snap();if(st.h<.1&&(rain>.2||gy<WATER+.7))footprint(gy)}
   wind(.05+.07*rain+.05*(1-dayF));
+  canT-=dt;if(canT<=0){canT=.5;let c=0;for(const n of nodes)if(n.k=='tree'&&n.hp>0&&Math.abs(n.x-st.x)<14&&Math.abs(n.z-st.z)<14)c++;rustle(Math.min(.09,c*.006)*(1+rain))} // шум крон
   // выносливость, усталость, температура
   const nearFire=fires.some(f=>Math.hypot(f.x-st.x,f.z-st.z)<5);
   st.sta=sprint?Math.max(0,st.sta-18*dt):Math.min(100,st.sta+(moving?6:14)*dt*(1-st.fat/150));
@@ -291,7 +295,7 @@ function update(dt){
   // порча мяса: сырое мясо гниёт за 150 с, если не приготовить
   if(inv.meat){st.meatAge+=dt;if(st.meatAge>150){add('rotten',inv.meat);delete inv.meat;st.meatAge=0;renderInv();toast('Мясо протухло!')}}else st.meatAge=0;
   if(st.hp<=0){mode='dead';localStorage.removeItem(SAVE);$('dead').classList.remove('hidden');return}
-  updWolves(dt);for(const m of prints)if(m&&m.userData.age<30){m.userData.age+=dt;m.scale.setScalar(Math.max(.01,1-m.userData.age/30))}
+  updWolves(dt);for(const t of traders)if(t.g&&Math.abs(t.x-st.x)<40&&Math.abs(t.z-st.z)<40)t.g.userData.anim(dt,swT,st.x,st.z);for(const m of prints)if(m&&m.userData.age<30){m.userData.age+=dt;m.scale.setScalar(Math.max(.01,1-m.userData.age/30))}
   // дождь (частицы)
   if(!rainM){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(Float32Array.from({length:1500},(_,i)=>i%3==1?Math.random()*14:(Math.random()-.5)*24),3));
     rainM=new THREE.Points(g,new THREE.PointsMaterial({color:0xaec8e0,size:.08,transparent:true,opacity:.6}));rainM.frustumCulled=false;scene.add(rainM)}
@@ -301,6 +305,8 @@ function update(dt){
   walk+=moving?dt*(sprint?11:8):0;hands.position.y=moving?Math.sin(walk)*.012:0;
   swing=Math.max(0,swing-dt*3.2);eatT=Math.max(0,eatT-dt*1.1);
   const sw=Math.sin(swing*Math.PI),ea=Math.sin(eatT*Math.PI);
+  const dy=st.yaw-pyaw,dp=st.pitch-ppitch;pyaw=st.yaw;ppitch=st.pitch; // инерция рук при повороте камеры
+  hands.rotation.y+=(Math.max(-.2,Math.min(.2,dy*2.5))-hands.rotation.y)*Math.min(1,dt*7);hands.rotation.x+=(Math.max(-.15,Math.min(.15,-dp*2))-hands.rotation.x)*Math.min(1,dt*7);hands.position.x=moving?Math.sin(walk*.5)*.008:0;
   const tt=1-swing,sa=swing>0?(tt<.35?tt/.35*.9:.9-(tt-.35)/.65*1.7):0; // замах вверх, удар вниз
   aR.rotation.x=.12+sa+ea*1.0;aR.position.set(.25-ea*.17,-.3+ea*.16,.15);aL.rotation.x=.12+Math.sin(walk*.5)*.02;aL.position.y=-.3+(moving?Math.sin(walk+1)*.01:0);
   const tl=GRIP.includes(heldK);RH.g.rotation.z+=((tl?-1.5:-.4)-RH.g.rotation.z)*Math.min(1,dt*10);GFX.curl(RH,tl?1:heldK?.55:.22);GFX.curl(LH,.25);LH.g.rotation.z=.25;
@@ -310,7 +316,7 @@ function update(dt){
   $('bHp').style.width=st.hp+'%';$('bHun').style.width=st.hun+'%';$('bThi').style.width=st.thi+'%';
   $('bSta').style.width=st.sta+'%';$('frost').style.opacity=Math.max(0,Math.min(1,(45-st.tmp)/25));hurtF=Math.max(0,hurtF-dt*1.5);$('hurt').style.opacity=Math.min(1,hurtF+(st.bleed?.35+.15*Math.sin(swT*4):0));$('bTmp').style.width=st.tmp+'%';$('bFat').style.width=st.fat+'%';
   const hh=(st.t*24+6)%24|0,mm=((st.t*24+6)%1*60)|0;$('clock').textContent=`${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`+` ${amb|0}°C`+(rain>.3?' 🌧':'')+(st.bleed?' 🩸':'');
-  const t=target(),b=$('bAct');b.classList.toggle('hidden',!t);if(t)b.textContent=t.label;
+  const t=target(),b=$('bAct');b.classList.toggle('hidden',!t);if(t)$('actLbl').textContent=t.label;
 }
 
 /* ===== Старт ===== */

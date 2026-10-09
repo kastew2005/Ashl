@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="icon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Barlow+Condensed:wght@400;600&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Barlow+Condensed:wght@400;600&family=Stardos+Stencil:wght@700&display=swap">
 <link rel="stylesheet" href="style.css">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 </head>
@@ -59,8 +59,13 @@
   <div id="toast"></div>
   <div id="hotbar"></div>
   <div id="stick"><div id="knob"></div></div>
-  <button id="bAct" class="act hidden">Действие</button>
-  <button id="bJump" class="act jump">⤒</button>
+  <div id="btns">
+    <button id="bAct" class="gbtn big hidden"><svg viewBox="0 0 24 24"><path d="M9 11V5.5a1.5 1.5 0 013 0V10m0-1.5a1.5 1.5 0 013 0V11m0-1a1.5 1.5 0 013 0v5c0 3.5-2.5 6-6 6s-6-2-6-5.5V13a1.5 1.5 0 013 0"/></svg><small id="actLbl">Действие</small></button>
+    <button id="bAtk" class="gbtn"><svg viewBox="0 0 24 24"><path d="M4 20L16 8m-3-3l6 6M3 21l3-3"/></svg></button>
+    <button id="bJump" class="gbtn"><svg viewBox="0 0 24 24"><path d="M12 19V6m-6 6l6-6 6 6"/></svg></button>
+    <button id="bCrouch" class="gbtn"><svg viewBox="0 0 24 24"><path d="M6 8l6 6 6-6M6 15l6 6 6-6"/></svg></button>
+  </div>
+  <div id="splats"></div>
   <div id="frost"></div><div id="hurt"></div>
 </div>
 
