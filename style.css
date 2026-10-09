@@ -55,3 +55,17 @@ label{display:block;margin:12px 0;color:var(--mut)}select,input[type=range]{disp
 #menu::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(60% 40% at 25% 85%,rgba(170,185,200,.2),transparent),radial-gradient(50% 35% at 75% 70%,rgba(170,185,200,.12),transparent);animation:fog 16s ease-in-out infinite alternate}
 @keyframes fog{to{transform:translateX(7%) scale(1.12);opacity:.6}}
 .btn:active{transform:scale(.96);box-shadow:0 0 22px rgba(255,154,61,.55);border-color:var(--ember)}
+/* ===== v3: индустриальный стиль — шлифованный металл, кожа, янтарные линии ===== */
+h1,h2{font-family:Oswald,Rajdhani,Impact,sans-serif;font-weight:700}
+body,.btn{font-family:"Barlow Condensed",Oswald,"Segoe UI",sans-serif;letter-spacing:.03em}
+.btn{font-size:18px}
+.glass,.menubox,.box{background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 3px),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .4 0 0 0 0 .3 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),linear-gradient(180deg,rgba(38,34,30,.66),rgba(13,16,20,.82))}
+.menubox,.box{border:1px solid rgba(214,160,74,.35);border-left:3px solid #d6a04a;box-shadow:inset 0 1px 0 rgba(255,220,160,.12),0 24px 60px rgba(0,0,0,.55)}
+.slot{box-shadow:inset 0 2px 6px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.05);transition:transform .15s}
+.slot:active{transform:scale(.92)}.slot.r3,.slot.r2,.slot.r1{background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.07),rgba(0,0,0,.4))}
+.slot{filter:drop-shadow(0 2px 2px rgba(0,0,0,.6))}
+.btn.timing{background:conic-gradient(var(--ember) var(--p,0deg),rgba(255,255,255,.06) 0);color:#fff}
+.jump{right:calc(150px + env(safe-area-inset-right));bottom:calc(32px + env(safe-area-inset-bottom));min-width:60px;height:60px;border-radius:50%;font-size:22px;padding:0}
+#frost,#hurt{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .4s;z-index:4}
+#frost{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.018 .055' numOctaves='4' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 .82 0 0 0 0 .93 0 0 0 0 1 0 0 0 1.9 -.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E"),radial-gradient(ellipse at center,transparent 40%,rgba(200,230,250,.6) 100%);-webkit-mask-image:radial-gradient(ellipse at center,transparent 28%,#000 82%);mask-image:radial-gradient(ellipse at center,transparent 28%,#000 82%)}
+#hurt{background:radial-gradient(ellipse at center,transparent 45%,rgba(160,0,0,.75) 100%)}
